@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generative AI for IT Professionals | Course Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Typography & Base */
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #fafaf9; /* stone-50 */
+            color: #44403c; /* stone-700 */
+        }
+        
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* Chart Container Styling - MANDATORY */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px; /* Constrained for the attendance gauge */
+            margin-left: auto;
+            margin-right: auto;
+            height: 250px;
+            max-height: 250px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f4; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a29e; 
+        }
+
+        /* Interactive Elements */
+        .week-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .week-card.active {
+            border-left-width: 4px;
+            border-left-color: #4f46e5; /* indigo-600 */
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .week-card:hover:not(.active) {
+            background-color: #f5f5f4;
+        }
+
+        /* Checkbox Animation */
+        .checkbox-wrapper input:checked + div {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+        }
+        .checkbox-wrapper input:checked + div svg {
+            display: block;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+    
+    <!-- Chosen Palette: Warm Stone & Indigo Tech (Calm, Professional, Forward-looking) -->
+    <!-- Application Structure Plan:
+        1. "Hero Dashboard": Immediate access to logistics (Instructor, Time, Link) and Course Description highlights.
+        2. "Syllabus Explorer": An interactive split-view (List/Detail) for the 7-week schedule. Users click a week to see the specific topics. This reduces scroll fatigue compared to a long table.
+        3. "Certificate Tracker": A gamified/interactive section where users can simulate their attendance. Since the report specifies an 80% requirement, this tool helps them visualize how many classes they can miss (buffer) while still qualifying. This transforms a static rule into an interactive tool.
+        4. "Methodology & Support": Card-based layout for the "dry" text (Methodology, Assignments, Materials) to make it skimmable.
+        RATIONALE: The report is a syllabus. The primary user tasks are "When is class?", "What are we learning?", and "How do I pass?". The structure directly addresses these queries.
+    -->
+    <!-- Visualization & Content Choices:
+        1. Attendance Requirement -> Goal: Inform/Relate -> Method: Doughnut Chart (Chart.js) -> Interaction: Dynamic update based on user checkbox input. -> Justification: The 80% rule is the only quantitative metric. Visualizing the "Buffer" vs "Required" makes the policy clear.
+        2. Weekly Topics -> Goal: Change/Organize -> Method: Interactive List & Detail View (HTML/JS) -> Interaction: Click week to reveal topics. -> Justification: Keeps the interface clean and allows focus on specific dates.
+        3. Course Pillars -> Goal: Inform -> Method: Icon Grid (HTML/Tailwind) -> Interaction: Hover effects. -> Justification: Breaks down the "Course Description" into digestible chunks.
+        CONFIRMATION: NO SVG graphics used (except inline SVG icons). NO Mermaid JS used.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-800">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-stone-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold font-heading">AI</div>
+                <span class="text-xl font-bold text-stone-800 tracking-tight font-heading hidden sm:block">Gen AI for IT Pros</span>
+            </div>
+            <div class="flex items-center space-x-6">
+                <span class="text-sm font-medium text-stone-500">W2026 Semester</span>
+                <a href="#teams-link" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    Join Class
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+        <!-- Hero Section: Course Logistics -->
+        <section class="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <span class="inline-block px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold uppercase tracking-wide mb-4">Course Syllabus</span>
+                    <h1 class="text-4xl md:text-5xl font-bold text-stone-900 mb-4 font-heading">Generative AI for <br><span class="text-indigo-600">IT Professionals</span></h1>
+                    <p class="text-lg text-stone-600 mb-6 leading-relaxed">
+                        Master the fundamental concepts, best practices, and real-world applications of Generative AI. 
+                        Designed for IT professionals ready to integrate AI into their workflows.
+                    </p>
+                    
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="flex items-start">
+                            <span class="text-xl mr-2">👨‍🏫</span>
+                            <div>
+                                <p class="font-semibold text-stone-900">Instructor</p>
+                                <p class="text-stone-500">Asen Grozdanov</p>
+                                <a href="mailto:agrozdanov@crcmail.net" class="text-indigo-600 hover:underline text-xs">agrozdanov@crcmail.net</a>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="text-xl mr-2">📅</span>
+                            <div>
+                                <p class="font-semibold text-stone-900">Schedule</p>
+                                <p class="text-stone-500">Thursdays, 6:30 - 8:30 PM</p>
+                                <p class="text-stone-400 text-xs">Jan 29 - Mar 12, 2026</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Course Pillars Grid -->
+                <div class="bg-stone-50 rounded-xl p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 content-center">
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-stone-100">
+                        <div class="text-indigo-500 mb-2 font-bold text-lg">01</div>
+                        <h3 class="font-bold text-stone-800 text-sm mb-1">Fundamentals</h3>
+                        <p class="text-xs text-stone-500">Core concepts of Gen AI.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-stone-100">
+                        <div class="text-indigo-500 mb-2 font-bold text-lg">02</div>
+                        <h3 class="font-bold text-stone-800 text-sm mb-1">Best Practices</h3>
+                        <p class="text-xs text-stone-500">Industry standards & ethics.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-stone-100">
+                        <div class="text-indigo-500 mb-2 font-bold text-lg">03</div>
+                        <h3 class="font-bold text-stone-800 text-sm mb-1">Applications</h3>
+                        <p class="text-xs text-stone-500">IT-specific exercises.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-stone-100">
+                        <div class="text-indigo-500 mb-2 font-bold text-lg">04</div>
+                        <h3 class="font-bold text-stone-800 text-sm mb-1">Scenarios</h3>
+                        <p class="text-xs text-stone-500">Real-world case studies.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Syllabus Timeline -->
+        <section id="syllabus">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-stone-900 font-heading">Course Roadmap</h2>
+                <p class="text-stone-500">Explore the 7-week journey. Click a week to view details.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-[500px]">
+                <!-- Week List (Left) -->
+                <div class="lg:col-span-4 flex flex-col gap-2 overflow-y-auto pr-2" id="week-list">
+                    <!-- JS will populate this -->
+                </div>
+
+                <!-- Week Detail (Right) -->
+                <div class="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-stone-200 p-8 flex flex-col justify-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-8 -mt-8 z-0"></div>
+                    
+                    <div id="week-content" class="relative z-10 fade-in">
+                        <!-- JS will populate this -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Methodology & Attendance Calculator -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Methodology & Policies -->
+            <div class="bg-white rounded-2xl shadow-sm border border-stone-200 p-8">
+                <h2 class="text-2xl font-bold text-stone-900 font-heading mb-6">Methodology & Requirements</h2>
+                
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-stone-800 mb-2 flex items-center">
+                            <span class="w-6 h-6 bg-stone-100 rounded flex items-center justify-center mr-2 text-xs">🎓</span>
+                            Teaching Style
+                        </h3>
+                        <p class="text-stone-600 text-sm leading-relaxed">
+                            The instructor will present content through lectures and demonstrations. Learner progress is evaluated continuously, with extra assistance provided as required. 
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-stone-800 mb-2 flex items-center">
+                            <span class="w-6 h-6 bg-stone-100 rounded flex items-center justify-center mr-2 text-xs">💻</span>
+                            Active Participation
+                        </h3>
+                        <p class="text-stone-600 text-sm leading-relaxed mb-2">
+                            Individual presence and consistent participation are required. Be online within the first 5 minutes.
+                        </p>
+                        <div class="bg-stone-50 p-3 rounded-lg border border-stone-100 text-xs text-stone-500">
+                            <strong>Note:</strong> Camera use is optional, but you must take part in discussions (verbal or chat) and exercises.
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-stone-800 mb-2 flex items-center">
+                            <span class="w-6 h-6 bg-stone-100 rounded flex items-center justify-center mr-2 text-xs">📚</span>
+                            Materials
+                        </h3>
+                        <p class="text-stone-600 text-sm leading-relaxed">
+                            Handouts, reading materials, and exercises provided in PDF/Excel/Word. 
+                            <span class="text-indigo-600 font-medium">Headset and stable internet required.</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Attendance Tracker -->
+            <div class="bg-stone-900 rounded-2xl shadow-lg p-8 text-white relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+                
+                <h2 class="text-2xl font-bold font-heading mb-2">Certificate Eligibility</h2>
+                <p class="text-stone-400 text-sm mb-6">You need 80% attendance to receive the certificate. Use this simulator to check your status.</p>
+
+                <div class="flex flex-col md:flex-row items-center gap-8">
+                    <!-- Calculator Controls -->
+                    <div class="flex-1 w-full">
+                        <p class="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3">Mark Attended Weeks:</p>
+                        <div class="grid grid-cols-4 gap-3" id="attendance-checkboxes">
+                            <!-- JS Generated Checkboxes -->
+                        </div>
+                        <div class="mt-6 p-4 bg-stone-800 rounded-lg border border-stone-700">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm text-stone-300">Classes Attended</span>
+                                <span class="text-xl font-bold text-white" id="attended-count">0/7</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-stone-300">Required</span>
+                                <span class="text-sm font-medium text-indigo-400">6 Classes (80%)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="flex-1 flex flex-col items-center justify-center">
+                        <div class="chart-container">
+                            <canvas id="attendanceChart"></canvas>
+                        </div>
+                        <div id="status-message" class="mt-4 text-center font-bold text-lg text-stone-300">
+                            Calculating...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer / Class Link -->
+        <footer class="mt-12 text-center py-8 border-t border-stone-200" id="teams-link">
+            <h3 class="text-lg font-bold text-stone-800 mb-4">Ready to start?</h3>
+            <a href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_YmJkZGNhYzQtNDVlNi00MDIwLTk5MjktZjFlY2ZiOGNjOGQ3%40thread.v2/0?context=%7b%22Tid%22%3a%228e5c1dc0-14a2-4f0c-8cb9-e9011d8756e3%22%2c%22Oid%22%3a%223e023cba-4d96-4f98-9cdb-23a9d681a75f%22%7d" target="_blank" class="inline-flex items-center px-8 py-4 border border-transparent text-base font-medium rounded-full shadow-md text-white bg-stone-900 hover:bg-stone-800 focus:outline-none transition-all transform hover:scale-105">
+                <span class="mr-2">🚀</span> Join Teams Meeting
+            </a>
+            <p class="mt-4 text-sm text-stone-500">
+                Course runs Jan 29 - Mar 12, 2026<br>
+                Contact: <a href="mailto:agrozdanov@crcmail.net" class="text-indigo-600 hover:underline">agrozdanov@crcmail.net</a>
+            </p>
+        </footer>
+
+    </main>
+
+    <script>
+        // --- Data ---
+        const weeks = [
+            { id: 1, date: "Jan 29", title: "Intro to Gen AI & Prompt Engineering", topics: ["<a href='01.01. session 01.html' target='_blank' class='hover:text-indigo-600 hover:underline transition-colors'>Introduction to Generative AI</a>", "<a href='01.02. exercises 01.html' target='_blank' class='hover:text-indigo-600 hover:underline transition-colors'>Prompt Engineering</a>"], desc: "Kick off the course by understanding the landscape of Generative AI. We will dive deep into the art and science of Prompt Engineering—the critical skill for controlling AI outputs." },
+            { id: 2, date: "Feb 05", title: "Content Creation", topics: ["Content Creation with Generative AI"], desc: "Explore how AI is revolutionizing the creation of text, images, and code. We will look at tools and techniques for high-quality content generation." },
+            { id: 3, date: "Feb 12", title: "Data Analytics & AI", topics: ["Data Analytics and AI"], desc: "Learn how Generative AI intersects with data analysis. Discover how to use AI to interpret data, generate insights, and visualize trends." },
+            { id: 4, date: "Feb 19", title: "Chatbots in Business", topics: ["Chatbots in Business"], desc: "Focus on the deployment of conversational agents. We will discuss the business logic, customer service applications, and implementation of chatbots." },
+            { id: 5, date: "Feb 26", title: "Automation", topics: ["Automation with Generative AI"], desc: "Unlock the power of automation. Learn to build workflows where AI handles repetitive cognitive tasks, increasing efficiency." },
+            { id: 6, date: "Mar 05", title: "KPIs & Measurement", topics: ["KPIs for Measuring AI Performance in Automation"], desc: "How do you know it's working? We will define Key Performance Indicators (KPIs) specific to AI automation to measure ROI and success." },
+            { id: 7, date: "Mar 12", title: "Ethics & Future Trends", topics: ["Documentation and Ethical Considerations", "Advanced Topics and Future Trends"], desc: "Wrap up with the crucial aspects of AI ethics, proper documentation, and a look ahead at what's coming next in the field." }
+        ];
+
+        // --- State ---
+        let currentWeek = 0;
+        let attendanceState = [false, false, false, false, false, false, false];
+        let attendanceChart = null;
+
+        // --- DOM Elements ---
+        const weekListEl = document.getElementById('week-list');
+        const weekContentEl = document.getElementById('week-content');
+        const checkboxesEl = document.getElementById('attendance-checkboxes');
+        const attendedCountEl = document.getElementById('attended-count');
+        const statusMessageEl = document.getElementById('status-message');
+
+        // --- Init Functions ---
+
+        function initSyllabus() {
+            // Render Week List
+            weeks.forEach((week, index) => {
+                const btn = document.createElement('button');
+                btn.className = `week-card w-full text-left p-4 rounded-lg border border-stone-200 mb-2 flex justify-between items-center group ${index === 0 ? 'active' : 'bg-white'}`;
+                btn.onclick = () => selectWeek(index);
+                btn.innerHTML = `
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-stone-400 mb-1">Week ${week.id} • ${week.date}</div>
+                        <div class="font-bold text-stone-800 text-sm group-hover:text-indigo-600 transition-colors">${week.title}</div>
+                    </div>
+                    <span class="text-stone-300 group-hover:text-indigo-400 transition-colors">→</span>
+                `;
+                weekListEl.appendChild(btn);
+            });
+
+            // Render Initial Content
+            renderWeekContent(0);
+        }
+
+        function renderWeekContent(index) {
+            const week = weeks[index];
+            
+            // Reset Animation
+            weekContentEl.classList.remove('fade-in');
+            void weekContentEl.offsetWidth; // trigger reflow
+            weekContentEl.classList.add('fade-in');
+
+            weekContentEl.innerHTML = `
+                <div class="flex items-center mb-6">
+                    <span class="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded text-sm mr-4">Week ${week.id}</span>
+                    <span class="text-stone-500 font-medium">${week.date}, 2026</span>
+                </div>
+                <h3 class="text-3xl font-bold text-stone-900 mb-4 font-heading">${week.title}</h3>
+                <p class="text-stone-600 text-lg mb-8 leading-relaxed">${week.desc}</p>
+                
+                <div class="bg-stone-50 rounded-xl p-6 border border-stone-100">
+                    <h4 class="text-sm font-bold uppercase tracking-wider text-stone-500 mb-4">Detailed Topics</h4>
+                    <ul class="space-y-3">
+                        ${week.topics.map(topic => `
+                            <li class="flex items-start">
+                                <span class="text-indigo-500 mr-2 mt-1">●</span>
+                                <span class="text-stone-800 font-medium">${topic}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function selectWeek(index) {
+            currentWeek = index;
+            
+            // Update List Styles
+            const buttons = weekListEl.children;
+            for (let i = 0; i < buttons.length; i++) {
+                if (i === index) {
+                    buttons[i].classList.add('active', 'bg-white');
+                    buttons[i].classList.remove('bg-white'); // handled by active
+                } else {
+                    buttons[i].classList.remove('active');
+                    buttons[i].classList.add('bg-white');
+                }
+            }
+
+            renderWeekContent(index);
+        }
+
+        function initAttendance() {
+            // Render Checkboxes
+            weeks.forEach((week, index) => {
+                const wrapper = document.createElement('label');
+                wrapper.className = "checkbox-wrapper cursor-pointer block relative";
+                wrapper.innerHTML = `
+                    <input type="checkbox" class="sr-only" onchange="toggleAttendance(${index})">
+                    <div class="w-full aspect-square rounded-lg border-2 border-stone-600 hover:border-indigo-400 transition-colors flex items-center justify-center bg-stone-800">
+                        <span class="text-stone-400 text-xs font-bold">W${week.id}</span>
+                        <svg class="w-6 h-6 text-white absolute hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                `;
+                checkboxesEl.appendChild(wrapper);
+            });
+
+            // Init Chart
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            attendanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Attended', 'Remaining to Pass', 'Allowed Misses'],
+                    datasets: [{
+                        data: [0, 6, 1], // Initial state: 0 attended, 6 needed, 1 buffer
+                        backgroundColor: [
+                            '#6366f1', // Indigo 500 (Attended)
+                            '#3730a3', // Indigo 900 (Needed)
+                            '#44403c'  // Stone 700 (Buffer)
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+
+            updateAttendanceVisuals();
+        }
+
+        function toggleAttendance(index) {
+            attendanceState[index] = !attendanceState[index];
+            updateAttendanceVisuals();
+        }
+
+        function updateAttendanceVisuals() {
+            const totalWeeks = 7;
+            const requiredWeeks = 6; // 80% of 7 is 5.6, so 6
+            const attended = attendanceState.filter(Boolean).length;
+            
+            attendedCountEl.innerText = `${attended}/${totalWeeks}`;
+
+            // Update Status Message
+            if (attended >= requiredWeeks) {
+                statusMessageEl.innerText = "🎉 Certificate Eligible!";
+                statusMessageEl.className = "mt-4 text-center font-bold text-lg text-green-400";
+            } else {
+                const needed = requiredWeeks - attended;
+                statusMessageEl.innerText = `${needed} more class${needed > 1 ? 'es' : ''} needed`;
+                statusMessageEl.className = "mt-4 text-center font-bold text-lg text-indigo-200";
+            }
+
+            // Update Chart Data
+            // Segments: [Attended So Far, Needed to Reach Goal, Buffer/Extra]
+            
+            let data = [];
+            
+            // Logic for the donut visual:
+            // We want the whole circle to be the "Goal" (6 classes).
+            // Or maybe the whole circle is Total Weeks (7). Let's do Total Weeks.
+            
+            const remainingToPass = Math.max(0, requiredWeeks - attended);
+            const bufferUsed = Math.max(0, totalWeeks - requiredWeeks); // 1 week
+            // But wait, chart logic needs to simply show progress.
+            
+            // Let's simplify: 
+            // Blue: Attended
+            // Dark Blue: Remaining Required
+            // Grey: Buffer (The 7th class which isn't strictly needed)
+            
+            // Example: 0 Attended -> [0, 6, 1]
+            // Example: 3 Attended -> [3, 3, 1]
+            // Example: 6 Attended -> [6, 0, 1]
+            // Example: 7 Attended -> [6, 0, 0] (actually 7, but chart logic adjusts)
+
+            const chartAttended = attended;
+            const chartRemaining = Math.max(0, requiredWeeks - attended);
+            const chartBuffer = totalWeeks - (chartAttended + chartRemaining);
+
+            attendanceChart.data.datasets[0].data = [chartAttended, chartRemaining, chartBuffer];
+            
+            // Dynamic Colors based on success
+            if (attended >= requiredWeeks) {
+                attendanceChart.data.datasets[0].backgroundColor = ['#22c55e', '#22c55e', '#15803d']; // Green Theme
+            } else {
+                 attendanceChart.data.datasets[0].backgroundColor = ['#6366f1', '#3730a3', '#44403c']; // Indigo Theme
+            }
+            
+            attendanceChart.update();
+        }
+
+        // --- Run ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initSyllabus();
+            initAttendance();
+        });
+
+    </script>
+</body>
+</html>

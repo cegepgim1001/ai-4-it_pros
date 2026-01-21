@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenAI Workshop: Prompt Engineering Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Warm Neutrals (Stone) with Teal Accents -->
+    <!-- Application Structure Plan: 
+         1. Dashboard: Central hub for navigation.
+         2. Tools Module: Interactive comparison of AI tools.
+         3. Text Lab (Ex 1): Step-by-step wizard simulating prompt evolution with live charting.
+         4. Image Lab (Ex 2): Step-by-step wizard for image generation parameters.
+         Why: Breaks down the linear document into task-oriented modules, allowing students to focus on one concept at a time. 
+    -->
+    <!-- Visualization & Content Choices:
+         - Tool Comparison: Radar Chart -> Goal: Compare trade-offs (Privacy vs Ease) -> Interaction: Filter tools.
+         - Prompt Quality: Line Chart -> Goal: Show progress of prompt refinement -> Interaction: Updates on 'Next Step'.
+         - Justification: Visualizes the abstract concept of "prompt quality" increasing with specific constraints.
+         - Confirmation: NO SVG graphics used. NO Mermaid JS used.
+    -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f4; /* Tailwind stone-100 */
+            color: #1c1917; /* Tailwind stone-900 */
+        }
+        
+        /* Chart Container Styling per Requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Transitions */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-active {
+            border-left: 4px solid #0d9488; /* Teal-600 */
+            background-color: #f0fdfa; /* Teal-50 */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-stone-800">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-stone-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-teal-700 tracking-tight">GenAI<span class="text-stone-600 font-light">Workshop</span></span>
+                </div>
+                <div class="hidden md:flex space-x-8 items-center">
+                    <button onclick="router('dashboard')" class="text-stone-600 hover:text-teal-600 font-medium transition">Dashboard</button>
+                    <button onclick="router('tools')" class="text-stone-600 hover:text-teal-600 font-medium transition">Tools & Setup</button>
+                    <button onclick="router('text-lab')" class="text-stone-600 hover:text-teal-600 font-medium transition">Text Lab</button>
+                    <button onclick="router('image-lab')" class="text-stone-600 hover:text-teal-600 font-medium transition">Image Lab</button>
+                </div>
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button onclick="toggleMobileMenu()" class="text-stone-600 hover:text-teal-600">
+                        <span class="text-2xl">☰</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-stone-200 p-4 space-y-2">
+            <button onclick="router('dashboard')" class="block w-full text-left px-3 py-2 text-stone-600 hover:bg-stone-50 rounded">Dashboard</button>
+            <button onclick="router('tools')" class="block w-full text-left px-3 py-2 text-stone-600 hover:bg-stone-50 rounded">Tools & Setup</button>
+            <button onclick="router('text-lab')" class="block w-full text-left px-3 py-2 text-stone-600 hover:bg-stone-50 rounded">Text Lab</button>
+            <button onclick="router('image-lab')" class="block w-full text-left px-3 py-2 text-stone-600 hover:bg-stone-50 rounded">Image Lab</button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="app-content" class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <!-- Views will be injected here by JS -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-stone-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 text-center text-stone-500 text-sm">
+            <p>General AI for IT Professionals (Non-Credit) | January 2026</p>
+            <p class="mt-1">Designed for interactive learning. All suggested tools are optional.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- DATA STORE ---
+        const appData = {
+            courseInfo: {
+                title: "Introduction to Generative AI and Prompt Engineering",
+                date: "January 2026",
+                duration: "1 Hour",
+                disclaimer: "⚠️ IMPORTANT: All tools proposed are OPEN suggestions. Be creative, research thoroughly, and feel free to create your own workflows!"
+            },
+            tools: [
+                {
+                    name: "Google Gemini",
+                    type: "Web-Based",
+                    category: "Text & Image",
+                    cost: "Free Tier",
+                    privacy: "Medium",
+                    setup: "None (Google Account)",
+                    desc: "Cloud-based LLM & Multimodal AI.",
+                    specs: "Browser & Internet",
+                    link: "https://gemini.google.com/"
+                },
+                {
+                    name: "OpenAI ChatGPT",
+                    type: "Web-Based",
+                    category: "Text",
+                    cost: "Free Tier",
+                    privacy: "Medium",
+                    setup: "None (OpenAI Account)",
+                    desc: "Cloud-based LLM standard.",
+                    specs: "Browser & Internet",
+                    link: "https://chatgpt.com/"
+                },
+                {
+                    name: "LM Studio (Llama 3)",
+                    type: "Local",
+                    category: "Text",
+                    cost: "Free (Open Source)",
+                    privacy: "High",
+                    setup: "Install Software + Download Model",
+                    desc: "Privacy-focused local LLM runner.",
+                    specs: "Win/Mac/Linux, 8GB+ RAM, NVIDIA GPU rec.",
+                    link: "https://lmstudio.ai/"
+                },
+                {
+                    name: "Microsoft Designer",
+                    type: "Web-Based",
+                    category: "Image",
+                    cost: "Free (Credits)",
+                    setup: "None (Microsoft Account)",
+                    desc: "DALL-E 3 powered cloud generation.",
+                    specs: "Browser & Internet",
+                    link: "https://designer.microsoft.com/"
+                },
+                {
+                    name: "Fooocus (Stable Diffusion)",
+                    type: "Local",
+                    category: "Image",
+                    cost: "Free & Open Source",
+                    privacy: "High",
+                    setup: "Download & Run.bat",
+                    desc: "Local Image Generator (SDXL).",
+                    specs: "Win 10/11, 8GB RAM, NVIDIA 4GB+ GPU",
+                    link: "https://github.com/lllyasviel/Fooocus"
+                }
+            ],
+            ex1: {
+                title: "Building a Text Prompt",
+                scenario: "Create a summary of cybersecurity trends for an IT report (Jan 2026).",
+                steps: [
+                    { name: "Basic", prompt: "Summarize cybersecurity trends.", reflection: "Too vague. Lacks context.", score: 20 },
+                    { name: "Context", prompt: "Summarize the latest cybersecurity trends for an IT report aimed at IT professionals.", reflection: "Better audience targeting, still broad.", score: 40 },
+                    { name: "Topics", prompt: "Summarize the latest cybersecurity trends, focusing on ransomware and phishing, for an IT report aimed at IT professionals.", reflection: "Focuses on critical areas.", score: 55 },
+                    { name: "Format", prompt: "Summarize the latest cybersecurity trends, focusing on ransomware and phishing, in a structured format with bullet points, for an IT report aimed at IT professionals.", reflection: "Organized output.", score: 70 },
+                    { name: "Length", prompt: "Summarize the latest cybersecurity trends, focusing on ransomware and phishing, in a structured format with bullet points, in 200 words, for an IT report aimed at IT professionals.", reflection: "Concise and fits report limits.", score: 85 },
+                    { name: "Tone", prompt: "Summarize the latest cybersecurity trends, focusing on ransomware and phishing, in a structured format with bullet points, in 200 words, using a professional and formal tone, for an IT report aimed at IT professionals.", reflection: "Polished, professional language.", score: 95 },
+                    { name: "Final", prompt: "Final Polish", reflection: "Ready for professional use.", score: 100 }
+                ]
+            },
+            ex2: {
+                title: "Building an Image Prompt",
+                scenario: "Generate an illustration of a modern workspace for an IT professional (Jan 2026).",
+                steps: [
+                    { name: "Basic", prompt: "A modern workspace.", analysis: "Generic. No IT context.", complexity: 15 },
+                    { name: "Subject", prompt: "A modern workspace designed for an IT professional.", analysis: "Adds relevancy (computers), but still vague.", complexity: 30 },
+                    { name: "Elements", prompt: "...featuring dual monitors, a laptop, and a server rack in the background.", analysis: "Specific objects anchor the scene.", complexity: 50 },
+                    { name: "Style", prompt: "...in a realistic and detailed art style.", analysis: "Defines the visual aesthetic (not a cartoon).", complexity: 65 },
+                    { name: "Environment", prompt: "...with warm ambient lighting in a sleek, minimalist office.", analysis: "Adds mood and atmosphere.", complexity: 80 },
+                    { name: "Palette", prompt: "...using a color palette of black, white, and orange.", analysis: "Aligns with branding/preferences.", complexity: 90 },
+                    { name: "Tech Params", prompt: "...in a 16:9 aspect ratio.", analysis: "Technical fit for presentation slides.", complexity: 100 }
+                ]
+            }
+        };
+
+        // --- STATE MANAGEMENT ---
+        let state = {
+            view: 'dashboard',
+            ex1Step: 0,
+            ex2Step: 0,
+            toolFilter: 'all'
+        };
+
+        // --- CORE FUNCTIONS ---
+
+        function init() {
+            router('dashboard');
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function router(viewName) {
+            state.view = viewName;
+            const app = document.getElementById('app-content');
+            
+            // Hide mobile menu if open
+            document.getElementById('mobile-menu').classList.add('hidden');
+
+            // Render Views
+            switch(viewName) {
+                case 'dashboard':
+                    renderDashboard(app);
+                    break;
+                case 'tools':
+                    renderTools(app);
+                    break;
+                case 'text-lab':
+                    renderTextLab(app);
+                    break;
+                case 'image-lab':
+                    renderImageLab(app);
+                    break;
+                default:
+                    renderDashboard(app);
+            }
+            window.scrollTo(0, 0);
+        }
+
+        // --- RENDERERS ---
+
+        function renderDashboard(container) {
+            container.innerHTML = `
+                <div class="fade-in space-y-12">
+                    <!-- Hero Section -->
+                    <div class="text-center space-y-4 py-10">
+                        <span class="bg-teal-100 text-teal-800 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">In-Class Exercises</span>
+                        <h1 class="text-4xl md:text-5xl font-bold text-stone-900">${appData.courseInfo.title}</h1>
+                        <p class="text-xl text-stone-600 max-w-2xl mx-auto">${appData.courseInfo.date} • ${appData.courseInfo.duration}</p>
+                        
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 max-w-3xl mx-auto text-left mt-8 rounded-r">
+                            <p class="font-bold text-amber-800">Disclaimer</p>
+                            <p class="text-amber-700 text-sm">${appData.courseInfo.disclaimer}</p>
+                        </div>
+                    </div>
+
+                    <!-- Cards Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <!-- Card 1 -->
+                        <div onclick="router('tools')" class="group cursor-pointer bg-white rounded-xl shadow-sm border border-stone-200 p-6 hover:shadow-md transition transform hover:-translate-y-1">
+                            <div class="h-12 w-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-4 text-2xl">🛠️</div>
+                            <h3 class="text-xl font-bold text-stone-900 mb-2">Tools & Setup</h3>
+                            <p class="text-stone-500 text-sm">Review recommended hardware, software, and cloud platforms for Jan 2026.</p>
+                            <span class="text-blue-600 text-sm font-semibold mt-4 inline-block group-hover:underline">Explore Tools &rarr;</span>
+                        </div>
+
+                        <!-- Card 2 -->
+                        <div onclick="router('text-lab')" class="group cursor-pointer bg-white rounded-xl shadow-sm border border-stone-200 p-6 hover:shadow-md transition transform hover:-translate-y-1">
+                            <div class="h-12 w-12 bg-teal-100 text-teal-600 rounded-lg flex items-center justify-center mb-4 text-2xl">📝</div>
+                            <h3 class="text-xl font-bold text-stone-900 mb-2">Text Prompt Lab</h3>
+                            <p class="text-stone-500 text-sm">Interactive step-by-step workshop to refine text prompts for IT reports.</p>
+                            <span class="text-teal-600 text-sm font-semibold mt-4 inline-block group-hover:underline">Start Exercise 1 &rarr;</span>
+                        </div>
+
+                        <!-- Card 3 -->
+                        <div onclick="router('image-lab')" class="group cursor-pointer bg-white rounded-xl shadow-sm border border-stone-200 p-6 hover:shadow-md transition transform hover:-translate-y-1">
+                            <div class="h-12 w-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mb-4 text-2xl">🎨</div>
+                            <h3 class="text-xl font-bold text-stone-900 mb-2">Image Prompt Lab</h3>
+                            <p class="text-stone-500 text-sm">Master style, lighting, and technical parameters for AI image generation.</p>
+                            <span class="text-purple-600 text-sm font-semibold mt-4 inline-block group-hover:underline">Start Exercise 2 &rarr;</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTools(container) {
+            container.innerHTML = `
+                <div class="fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-stone-900">Recommended Tools (Jan 2026)</h2>
+                        <p class="text-stone-600 mt-2">Compare cloud-based and local options. Select the best fit for your hardware.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <!-- Left: Filter & List -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <!-- Filters -->
+                            <div class="flex space-x-2">
+                                <button onclick="filterTools('all')" class="px-4 py-2 rounded-full text-sm font-medium bg-stone-200 hover:bg-stone-300 text-stone-800 transition">All</button>
+                                <button onclick="filterTools('Web-Based')" class="px-4 py-2 rounded-full text-sm font-medium bg-white border border-stone-200 hover:border-teal-500 text-stone-600 transition">Web-Based</button>
+                                <button onclick="filterTools('Local')" class="px-4 py-2 rounded-full text-sm font-medium bg-white border border-stone-200 hover:border-teal-500 text-stone-600 transition">Local Install</button>
+                            </div>
+
+                            <!-- Tool Cards Container -->
+                            <div id="tool-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Right: Comparison Chart -->
+                        <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-stone-200 h-fit">
+                            <h3 class="text-lg font-bold text-stone-800 mb-4">Trade-off Analysis</h3>
+                            <div class="chart-container">
+                                <canvas id="toolsChart"></canvas>
+                            </div>
+                            <div class="mt-4 text-xs text-stone-500">
+                                <p><strong>Privacy:</strong> Local tools keep data on your machine.</p>
+                                <p><strong>Ease:</strong> Web tools require no installation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            filterTools('all');
+            initToolsChart();
+        }
+
+        function filterTools(filter) {
+            const list = document.getElementById('tool-list');
+            list.innerHTML = '';
+            
+            const filtered = filter === 'all' ? appData.tools : appData.tools.filter(t => t.type === filter);
+
+            filtered.forEach(tool => {
+                const badgeColor = tool.type === 'Local' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800';
+                list.innerHTML += `
+                    <div class="bg-white p-5 rounded-lg border border-stone-200 hover:shadow-md transition">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-bold text-lg text-stone-900">${tool.name}</h4>
+                            <span class="text-xs px-2 py-1 rounded ${badgeColor}">${tool.type}</span>
+                        </div>
+                        <p class="text-sm text-stone-600 mb-3">${tool.desc}</p>
+                        <div class="space-y-1 text-xs text-stone-500 bg-stone-50 p-3 rounded">
+                            <p><strong>Req:</strong> ${tool.specs}</p>
+                            <p><strong>Cost:</strong> ${tool.cost}</p>
+                            <p><strong>Install:</strong> ${tool.setup}</p>
+                        </div>
+                        <a href="${tool.link}" target="_blank" class="block mt-4 text-center text-sm font-bold text-teal-600 hover:bg-teal-50 py-2 rounded border border-teal-100 transition">Visit Website &nearr;</a>
+                    </div>
+                `;
+            });
+        }
+
+        function initToolsChart() {
+            const ctx = document.getElementById('toolsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Privacy', 'Ease of Setup', 'Hardware Lightness', 'Cost (Free)'],
+                    datasets: [{
+                        label: 'Web Tools',
+                        data: [40, 95, 100, 80], // Low privacy, easy setup, low hardware, mostly free
+                        fill: true,
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)', // Emerald
+                        borderColor: 'rgb(16, 185, 129)',
+                        pointBackgroundColor: 'rgb(16, 185, 129)',
+                    }, {
+                        label: 'Local Tools',
+                        data: [100, 40, 20, 100], // High privacy, hard setup, heavy hardware, fully free
+                        fill: true,
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)', // Indigo
+                        borderColor: 'rgb(99, 102, 241)',
+                        pointBackgroundColor: 'rgb(99, 102, 241)',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    elements: { line: { borderWidth: 2 } },
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            ticks: { display: false },
+                            grid: { color: '#e7e5e4' } // Stone-200
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTextLab(container) {
+            container.innerHTML = `
+                <div class="fade-in grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+                    
+                    <!-- Left: Instructions -->
+                    <div class="lg:col-span-4 space-y-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-teal-800">Exercise 1: Text Prompting</h2>
+                            <p class="text-sm text-stone-600 mt-2">Scenario: ${appData.ex1.scenario}</p>
+                        </div>
+                        
+                        <!-- Steps Navigation -->
+                        <div class="bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
+                            ${appData.ex1.steps.map((step, index) => `
+                                <div id="ex1-step-${index}" class="p-4 border-b border-stone-100 cursor-pointer hover:bg-stone-50 transition ${index === state.ex1Step ? 'step-active' : ''}" onclick="setEx1Step(${index})">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm font-semibold text-stone-700">Step ${index + 1}: ${step.name}</span>
+                                        ${index < state.ex1Step ? '<span class="text-teal-500">✓</span>' : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Center: Workspace -->
+                    <div class="lg:col-span-8 space-y-6">
+                        <!-- Prompt Display Box -->
+                        <div class="bg-stone-800 text-stone-100 p-6 rounded-xl shadow-lg relative min-h-[160px]">
+                            <span class="absolute top-4 left-4 text-xs font-mono text-stone-400 uppercase">Current Prompt</span>
+                            <p id="ex1-prompt-text" class="mt-6 text-lg font-mono leading-relaxed transition-all duration-300"></p>
+                        </div>
+
+                        <!-- Analysis Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Reflection Box -->
+                            <div class="bg-white p-5 rounded-lg border border-teal-100 shadow-sm">
+                                <h4 class="text-sm font-bold text-teal-800 uppercase tracking-wide mb-2">Analysis & Reflection</h4>
+                                <p id="ex1-reflection" class="text-stone-700 text-sm"></p>
+                            </div>
+
+                            <!-- Chart -->
+                            <div class="bg-white p-4 rounded-lg border border-stone-200 shadow-sm">
+                                <h4 class="text-xs font-bold text-stone-500 uppercase tracking-wide mb-2 text-center">Prompt Specificity Score</h4>
+                                <div class="chart-container" style="height: 150px;">
+                                    <canvas id="ex1Chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="flex justify-between mt-8">
+                            <button onclick="changeEx1Step(-1)" class="px-6 py-3 bg-white border border-stone-300 rounded-lg text-stone-600 hover:bg-stone-50 font-medium">Previous</button>
+                            <button onclick="changeEx1Step(1)" class="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 shadow-md font-medium">Next Improvement &rarr;</button>
+                        </div>
+
+                        <!-- Example Output Accordion (Simulated) -->
+                        <div id="ex1-output-sim" class="mt-6 border-t border-stone-200 pt-6">
+                            <h4 class="text-sm font-bold text-stone-500 uppercase tracking-wide mb-2">Simulated AI Response Preview</h4>
+                            <div class="bg-stone-50 p-4 rounded border border-stone-200 font-serif text-sm text-stone-600 italic">
+                                <span id="ex1-sim-response">Loading simulation...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            updateEx1UI();
+        }
+
+        let ex1ChartInstance = null;
+
+        function setEx1Step(index) {
+            state.ex1Step = index;
+            updateEx1UI();
+        }
+
+        function changeEx1Step(delta) {
+            const newStep = state.ex1Step + delta;
+            if(newStep >= 0 && newStep < appData.ex1.steps.length) {
+                state.ex1Step = newStep;
+                updateEx1UI();
+            }
+        }
+
+        function updateEx1UI() {
+            // Update Sidebar styling
+            appData.ex1.steps.forEach((_, idx) => {
+                const el = document.getElementById(`ex1-step-${idx}`);
+                if (el) {
+                    if (idx === state.ex1Step) {
+                        el.className = "p-4 border-b border-stone-100 cursor-pointer hover:bg-stone-50 transition step-active";
+                    } else {
+                        el.className = "p-4 border-b border-stone-100 cursor-pointer hover:bg-stone-50 transition";
+                    }
+                }
+            });
+
+            // Update Prompt Text
+            const currentData = appData.ex1.steps[state.ex1Step];
+            document.getElementById('ex1-prompt-text').innerHTML = `> "${currentData.prompt}"`;
+            document.getElementById('ex1-reflection').innerText = currentData.reflection;
+
+            // Simulate Output Logic (Simple mapping for demo)
+            let simResponse = "";
+            if(state.ex1Step === 0) simResponse = "Cybersecurity trends include malware and phishing. Companies should be careful.";
+            else if(state.ex1Step < 3) simResponse = "Trends for IT pros: 1. AI attacks. 2. Cloud security. 3. Zero trust models.";
+            else if(state.ex1Step < 5) simResponse = "Ransomware targets are shifting to critical infra. Phishing is using Deepfakes. (More generic details...)";
+            else simResponse = "• Ransomware: Evolution into RaaS models targeting supply chains.\n• Phishing: High-fidelity spear-phishing campaigns leveraging GenAI.\n(Concise, structured, professional tone applied.)";
+            document.getElementById('ex1-sim-response').innerText = simResponse;
+
+            // Update Chart
+            updateEx1Chart();
+        }
+
+        function updateEx1Chart() {
+            const ctx = document.getElementById('ex1Chart');
+            if(!ctx) return;
+            
+            // Data up to current step
+            const labels = appData.ex1.steps.map(s => s.name);
+            const dataPoints = appData.ex1.steps.map(s => s.score);
+            const currentData = new Array(appData.ex1.steps.length).fill(null);
+            
+            // Fill chart only up to active step for "progress" feel
+            for(let i=0; i<=state.ex1Step; i++) {
+                currentData[i] = dataPoints[i];
+            }
+
+            if (ex1ChartInstance) {
+                ex1ChartInstance.data.datasets[0].data = currentData;
+                ex1ChartInstance.update();
+            } else {
+                ex1ChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Specificity Score',
+                            data: currentData,
+                            borderColor: '#0d9488', // Teal
+                            backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, max: 100, display: false },
+                            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        }
+
+        // --- EXERCISE 2 (IMAGE) LOGIC ---
+
+        function renderImageLab(container) {
+            container.innerHTML = `
+                <div class="fade-in grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    
+                    <!-- Top: Header -->
+                    <div class="lg:col-span-12">
+                        <h2 class="text-2xl font-bold text-purple-800">Exercise 2: Image Prompt Construction</h2>
+                        <p class="text-sm text-stone-600">Scenario: ${appData.ex2.scenario}</p>
+                    </div>
+
+                    <!-- Left: Builder Controls -->
+                    <div class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                        <h3 class="font-bold text-stone-800 mb-4">Prompt Parameters</h3>
+                        <div class="space-y-3">
+                            ${appData.ex2.steps.map((step, index) => `
+                                <button onclick="setEx2Step(${index})" class="w-full text-left p-3 rounded-lg border transition flex justify-between items-center ${index === state.ex2Step ? 'bg-purple-50 border-purple-300 text-purple-900' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}">
+                                    <span class="text-sm font-medium">${step.name}</span>
+                                    <div class="w-24 h-2 bg-stone-200 rounded-full overflow-hidden">
+                                        <div class="bg-purple-500 h-full" style="width: ${step.complexity}%"></div>
+                                    </div>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Right: Visualization -->
+                    <div class="lg:col-span-7 space-y-6">
+                        <!-- Dynamic Prompt View -->
+                        <div class="bg-stone-900 text-purple-100 p-6 rounded-xl shadow-lg font-mono text-sm leading-relaxed border-l-4 border-purple-500">
+                             <span class="text-xs text-stone-500 block mb-2">// FINAL PROMPT COMPOSITION</span>
+                             <span id="ex2-full-prompt"></span>
+                        </div>
+
+                        <!-- Visual Breakdown -->
+                        <div class="bg-white p-6 rounded-xl border border-stone-200">
+                            <h4 class="text-sm font-bold text-stone-800 uppercase mb-4">Visual Component Stack</h4>
+                            <div id="ex2-stack" class="space-y-2">
+                                <!-- JS Injects visual stack here -->
+                            </div>
+                        </div>
+
+                        <!-- Insight Box -->
+                        <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                             <h4 class="text-purple-900 font-bold text-sm mb-1">Instructor Insight:</h4>
+                             <p id="ex2-insight" class="text-purple-800 text-sm"></p>
+                        </div>
+                        
+                        <!-- Navigation -->
+                        <div class="flex justify-between">
+                            <button onclick="changeEx2Step(-1)" class="text-stone-500 hover:text-stone-800 font-medium">Back</button>
+                            <div class="text-stone-400 text-sm">Step ${state.ex2Step + 1} of 7</div>
+                            <button onclick="changeEx2Step(1)" class="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 transition">Next Add-on</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            updateEx2UI();
+        }
+
+        function setEx2Step(index) {
+            state.ex2Step = index;
+            updateEx2UI();
+        }
+
+        function changeEx2Step(delta) {
+            const newStep = state.ex2Step + delta;
+            if(newStep >= 0 && newStep < appData.ex2.steps.length) {
+                state.ex2Step = newStep;
+                updateEx2UI();
+            }
+        }
+
+        function updateEx2UI() {
+            // Build the cumulative prompt
+            let fullPromptHTML = "";
+            let visualStackHTML = "";
+
+            appData.ex2.steps.forEach((step, idx) => {
+                if(idx <= state.ex2Step) {
+                    // Add to text prompt
+                    const isNew = idx === state.ex2Step;
+                    const textClass = isNew ? "text-white bg-purple-700 px-1 rounded" : "text-stone-300";
+                    fullPromptHTML += `<span class="${textClass} mr-1">${step.prompt.replace(/^\.\.\./, '')}</span> `;
+
+                    // Add to Visual Stack
+                    visualStackHTML += `
+                        <div class="flex items-center p-2 rounded border border-stone-100 ${isNew ? 'bg-purple-50 border-purple-200 shadow-sm' : 'bg-stone-50 opacity-70'}">
+                            <div class="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center text-xs font-bold text-stone-500 mr-3">${idx + 1}</div>
+                            <div>
+                                <div class="text-xs font-bold uppercase text-stone-400">${step.name}</div>
+                                <div class="text-sm text-stone-800">${isNew ? "Adding: " : ""}${step.analysis}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            document.getElementById('ex2-full-prompt').innerHTML = fullPromptHTML;
+            document.getElementById('ex2-stack').innerHTML = visualStackHTML;
+            document.getElementById('ex2-insight').innerText = appData.ex2.steps[state.ex2Step].analysis;
+            
+            // Re-render the step list to show active state
+            // (Handled by onClick re-renders or targeted class updates could be optimized, 
+            // but innerHTML refresh is fine for this scale)
+            const btnContainer = document.querySelector('.lg\\:col-span-5 .space-y-3');
+            if(btnContainer) {
+                 const buttons = btnContainer.children;
+                 for(let i=0; i<buttons.length; i++) {
+                     if(i === state.ex2Step) {
+                         buttons[i].className = "w-full text-left p-3 rounded-lg border transition flex justify-between items-center bg-purple-50 border-purple-300 text-purple-900";
+                     } else {
+                         buttons[i].className = "w-full text-left p-3 rounded-lg border transition flex justify-between items-center bg-white border-stone-200 text-stone-600 hover:bg-stone-50";
+                     }
+                 }
+            }
+        }
+
+        // --- INIT ---
+        window.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,908 @@
+<!-- Chosen Palette: "Tech-Humanist" - Background: Warm Slate/Stone (bg-stone-50), Primary: Deep Slate (text-slate-800), Accents: Indigo (for AI), Emerald (for Success), Rose (for Errors). Minimalistic, clean, reading-focused. -->
+
+<!-- Application Structure Plan: 
+    The application is designed as a "2026 AI Readiness Dashboard" for IT Professionals. 
+    Rationale: Since the audience is IT pros and the context is "Infrastructure" & "Utility", a dashboard/console aesthetic feels native and empowering. It moves away from a linear slide deck into a tool-like exploration.
+    
+    Structure:
+    1. Sidebar Navigation: Logical grouping of the lecture modules into "System Modules":
+       - "Overview": The 2026 Landscape (Lecture Intro).
+       - "Core Architecture": How it works (Tokens, Transformers).
+       - "Operations Center": Use Cases (Agents vs Scripts, Refactoring).
+       - "Security Protocols": Risks (Hallucinations, Supply Chain).
+       - "Command Line": Prompt Engineering (Techniques, Parameters).
+       - "Full Lecture Script": [NEW] The complete text content from the original lecture request, integrated for reading.
+    
+    Key Interactions:
+    - "Live Simulations": Instead of just reading about Next Token Prediction, users see a chart update in real-time. 
+    - "Agent vs Script": A togglable state machine showing how a script fails vs an agent succeeds.
+    - "Code Inspection": The Python examples are hidden behind "View Source" toggles to keep the UI clean but accessible for the "IT Professional" persona.
+    - "Prompt Lab": A slider-based interaction to understand Temperature and Few-Shot prompting.
+-->
+
+<!-- Visualization & Content Choices:
+    1. Report Info: "Next Token Prediction" -> Goal: Inform/Demystify -> Viz: Interactive Bar Chart (Chart.js) -> Interaction: Users type a phrase, chart shows probablistic next words -> Justification: Shows the probabilistic nature of AI better than text.
+    2. Report Info: "Rule-Based vs GenAI" -> Goal: Compare -> Viz: Interactive State Flow (HTML/JS) -> Interaction: Click "Simulate Error", watch two tracks (Script fails, Agent fixes) -> Justification: specific example from lecture regarding the "Self-Healing Server".
+    3. Report Info: "Temperature Parameter" -> Goal: Change -> Viz: Dynamic Scatter/Distribution (Chart.js) -> Interaction: Slider changes temperature, chart points spread out or cluster -> Justification: Visualizes "randomness" and "creativity" vs "determinism".
+    4. Report Info: "Prompting Techniques" -> Goal: Organize -> Viz: Tabbed Interface (Zero-shot, Few-shot, CoT) -> Interaction: Switching tabs changes the example and output -> Justification: Clear comparison of techniques.
+-->
+
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Readiness Dashboard 2026</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        stone: {
+                            50: '#fafaf9',
+                            100: '#f5f5f4',
+                            200: '#e7e5e4',
+                            800: '#292524',
+                            900: '#1c1917',
+                        },
+                        indigo: {
+                            600: '#4f46e5',
+                            50: '#eef2ff',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Chart Container Styling - MANDATORY */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Max width constraint */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px;
+        }
+        
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        .nav-item.active {
+            background-color: #eef2ff; /* indigo-50 */
+            color: #4f46e5; /* indigo-600 */
+            border-right: 3px solid #4f46e5;
+        }
+
+        .code-block {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        /* Typography for Reader Mode */
+        .prose h3 { font-size: 1.5rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; color: #1c1917; }
+        .prose h4 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #4f46e5; }
+        .prose p { margin-bottom: 1rem; line-height: 1.7; color: #44403c; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #44403c; }
+        .prose li { margin-bottom: 0.5rem; }
+        .prose pre { background-color: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.85rem; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-slate-800 h-screen overflow-hidden flex flex-col md:flex-row">
+
+    <!-- Mobile Header -->
+    <div class="md:hidden bg-white border-b border-stone-200 p-4 flex justify-between items-center z-20">
+        <div class="font-bold text-lg text-indigo-600">AI Dashboard 2026</div>
+        <button id="mobile-menu-btn" class="text-stone-600 focus:outline-none">
+            ☰
+        </button>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="bg-white border-r border-stone-200 w-full md:w-64 flex-shrink-0 absolute md:static h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-10 flex flex-col">
+        <div class="p-6 border-b border-stone-100 hidden md:block">
+            <h1 class="font-bold text-xl tracking-tight text-indigo-600">AI Dashboard</h1>
+            <p class="text-xs text-stone-500 mt-1">IT Professional Edition v2026.1</p>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1">
+                <li>
+                    <button onclick="navigateTo('overview')" class="nav-item active w-full text-left px-6 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-indigo-600 transition-colors">
+                        📊 Overview
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('architecture')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-indigo-600 transition-colors">
+                        🧠 Core Architecture
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('operations')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-indigo-600 transition-colors">
+                        ⚙️ Operations Center
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('security')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-indigo-600 transition-colors">
+                        🛡️ Security Protocols
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('prompting')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-indigo-600 transition-colors">
+                        ⌨️ Command Line (Prompting)
+                    </button>
+                </li>
+                <li class="pt-4 mt-2 border-t border-stone-100">
+                    <button onclick="navigateTo('lecture-full')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-indigo-600 transition-colors">
+                        📖 Full Lecture Script
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('resources')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-indigo-600 transition-colors">
+                        📚 Resources & Links
+                    </button>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="p-4 border-t border-stone-100">
+            <div class="bg-indigo-50 rounded-lg p-3">
+                <p class="text-xs text-indigo-800 font-semibold">Instructor Session</p>
+                <p class="text-xs text-indigo-600 mt-1">Jan 29, 2026</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto relative bg-stone-50">
+        
+        <!-- SECTION: OVERVIEW -->
+        <section id="overview" class="p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-fade-in">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-900">System Status: Online</h2>
+                <p class="text-slate-500 mt-2 text-lg">Introduction to Generative AI & Prompt Engineering (2026 Era)</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Stat Card 1 -->
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                    <div class="text-sm font-semibold text-stone-400 uppercase tracking-wider">Era Context</div>
+                    <div class="mt-2 text-2xl font-bold text-indigo-600">Digital Infrastructure</div>
+                    <p class="mt-2 text-stone-600 text-sm">AI is no longer a toy. It's utility. Think Cloud in 2016.</p>
+                </div>
+                <!-- Stat Card 2 -->
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                    <div class="text-sm font-semibold text-stone-400 uppercase tracking-wider">Key Shift</div>
+                    <div class="mt-2 text-2xl font-bold text-indigo-600">Agentic AI</div>
+                    <p class="mt-2 text-stone-600 text-sm">From "Talking" (Chatbots) to "Doing" (Executing Code, Managing Clusters).</p>
+                </div>
+                <!-- Stat Card 3 -->
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                    <div class="text-sm font-semibold text-stone-400 uppercase tracking-wider">Focus</div>
+                    <div class="mt-2 text-2xl font-bold text-indigo-600">Automation</div>
+                    <p class="mt-2 text-stone-600 text-sm">Keeping jobs relevant by leveraging Reasoning Models.</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-8">
+                <h3 class="text-xl font-bold mb-4">Lecture Roadmap</h3>
+                <div class="relative pl-8 border-l-2 border-stone-200 space-y-8">
+                    <div class="relative">
+                        <span class="absolute -left-[33px] bg-indigo-600 h-4 w-4 rounded-full border-4 border-white"></span>
+                        <h4 class="font-bold text-slate-800">Lesson 1: The Landscape</h4>
+                        <p class="text-stone-600 mt-1">Logic, Mechanics (Transformers/Tokens), and Infrastructure. Understanding the "Self-Healing Server".</p>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute -left-[33px] bg-stone-300 h-4 w-4 rounded-full border-4 border-white"></span>
+                        <h4 class="font-bold text-slate-800">Lesson 2: Prompt Engineering</h4>
+                        <p class="text-stone-600 mt-1">The art of steering systems. Parameters, Techniques (Few-Shot, CoT), and RAG.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: CORE ARCHITECTURE -->
+        <section id="architecture" class="hidden p-6 md:p-10 max-w-7xl mx-auto space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-900">Core Architecture</h2>
+                <p class="text-slate-500 mt-2">Understanding the engine: Transformers, Tokens, and Probability.</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Text Content -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                        <h3 class="font-bold text-lg mb-3">Autocomplete on Steroids</h3>
+                        <p class="text-stone-600 mb-4">
+                            Generative AI models (GPT-4, Gemini, Llama 4) don't "know" facts. They predict the <strong>next token</strong> based on probability.
+                        </p>
+                        <p class="text-stone-600">
+                            In 2026, the <strong>Context Window</strong> is massive (millions of tokens), allowing the model to "read" entire codebases to inform its prediction.
+                        </p>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                        <h3 class="font-bold text-lg mb-3 text-indigo-600">The "Token" Concept</h3>
+                        <p class="text-stone-600 text-sm mb-4">
+                            Text is broken into numerical IDs. The model processes numbers, not words.
+                        </p>
+                        <div class="bg-slate-900 rounded-lg p-4 overflow-hidden">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-slate-400 font-mono">token_demo.py</span>
+                                <button onclick="toggleCode('token-code')" class="text-xs text-indigo-400 hover:text-indigo-300">View Code</button>
+                            </div>
+                            <div id="token-code" class="hidden mb-4 border-b border-slate-700 pb-4">
+                                <pre class="code-block text-slate-300">import tiktoken
+encoder = tiktoken.get_encoding("o200k_base")
+text = "sudo systemctl restart nginx"
+tokens = encoder.encode(text)
+# Output: [1834, 4521, ...]
+decoded = encoder.decode(tokens)</pre>
+                            </div>
+                            <div class="font-mono text-sm text-green-400">
+                                > sudo systemctl restart nginx<br>
+                                <span class="text-slate-500">Tokens:</span> [1834, 4521, 9921, 442]<br>
+                                <span class="text-slate-500">Count:</span> 4 tokens
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Chart -->
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 flex flex-col">
+                    <h3 class="font-bold text-lg mb-2">Next Token Prediction Simulator</h3>
+                    <p class="text-sm text-stone-500 mb-4">Simulating the probability distribution for the phrase: <br><em>"Please find attached the..."</em></p>
+                    
+                    <div class="flex-1 flex flex-col justify-center">
+                        <div class="chart-container">
+                            <canvas id="tokenChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 bg-indigo-50 p-4 rounded-lg">
+                        <p class="text-sm text-indigo-800">
+                            <strong>Insight:</strong> The AI uses your history + internet data to predict "Q3_Financial_Summary.xlsx" instead of just "file".
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: OPERATIONS CENTER -->
+        <section id="operations" class="hidden p-6 md:p-10 max-w-7xl mx-auto space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-900">Operations Center</h2>
+                <p class="text-slate-500 mt-2">IT Use Cases: From Scripting to Agentic Reasoning.</p>
+            </header>
+
+            <!-- Agent vs Script Simulation -->
+            <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                <div class="p-6 border-b border-stone-100 flex flex-col md:flex-row justify-between items-start md:items-center">
+                    <div>
+                        <h3 class="font-bold text-xl">The "Self-Healing" Server</h3>
+                        <p class="text-stone-500 text-sm mt-1">Comparison: Explicit Programming vs. Generative Reasoning</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex space-x-2">
+                        <button onclick="runSimulation('script')" class="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 rounded text-sm font-medium transition">Run Bash Script</button>
+                        <button onclick="runSimulation('agent')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium transition">Activate AI Agent</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-stone-100">
+                    <!-- Script Side -->
+                    <div class="p-6 bg-stone-50">
+                        <h4 class="font-bold text-stone-700 mb-2">Old Way: Rule-Based</h4>
+                        <div class="bg-black text-green-400 font-mono text-xs p-4 rounded h-48 overflow-y-auto" id="script-console">
+                            > ./monitor_server.sh<br>
+                            > Monitoring CPU... 45% (OK)<br>
+                            > Monitoring Memory... 60% (OK)<br>
+                            > Waiting for event...
+                        </div>
+                        <div class="mt-4">
+                            <button onclick="toggleCode('script-code')" class="text-xs text-indigo-600 font-semibold hover:underline">View Logic (Python)</button>
+                            <div id="script-code" class="hidden mt-2 bg-slate-100 p-3 rounded text-xs font-mono border border-slate-200">
+                                def check_server(cpu, log):<br>
+                                &nbsp;&nbsp;if cpu > 90: return "Restart"<br>
+                                &nbsp;&nbsp;elif "Out of Memory" in log: return "Free Cache"<br>
+                                &nbsp;&nbsp;else: return "Unknown Error"
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Agent Side -->
+                    <div class="p-6 bg-white relative">
+                        <h4 class="font-bold text-indigo-700 mb-2">New Way: AI Agent</h4>
+                        <div class="bg-slate-900 text-blue-300 font-mono text-xs p-4 rounded h-48 overflow-y-auto" id="agent-console">
+                            > Agent Active.<br>
+                            > Observing system logs...<br>
+                            > Model: GPT-5 (Simulated)<br>
+                            > Waiting for event...
+                        </div>
+                        <div class="mt-4">
+                            <button onclick="toggleCode('agent-code')" class="text-xs text-indigo-600 font-semibold hover:underline">View Logic (Python)</button>
+                            <div id="agent-code" class="hidden mt-2 bg-slate-100 p-3 rounded text-xs font-mono border border-slate-200">
+                                def ask_agent(log):<br>
+                                &nbsp;&nbsp;prompt = f"Analyze log: {log}. Suggest fix."<br>
+                                &nbsp;&nbsp;return llm.generate(prompt)<br>
+                                # Can handle unknown errors like deadlocks
+                            </div>
+                        </div>
+                        
+                        <!-- Simulation Status Overlay -->
+                        <div id="sim-status" class="absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500">
+                            IDLE
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other Use Cases -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Use Case 1 -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200">
+                    <div class="flex items-center mb-4">
+                        <div class="w-8 h-8 rounded bg-orange-100 text-orange-600 flex items-center justify-center mr-3">⚒️</div>
+                        <h3 class="font-bold text-lg">Legacy Code Archeologist</h3>
+                    </div>
+                    <p class="text-sm text-stone-600 mb-4">
+                        Updating Perl (2008) to Python (2026). AI accelerates understanding of complex/old systems.
+                    </p>
+                    <div class="bg-stone-100 p-3 rounded text-xs font-mono text-stone-600">
+                        Input: "Explain this script and convert to boto3..."<br>
+                        Result: Done in 30 seconds.
+                    </div>
+                </div>
+
+                <!-- Use Case 2 -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200">
+                    <div class="flex items-center mb-4">
+                        <div class="w-8 h-8 rounded bg-blue-100 text-blue-600 flex items-center justify-center mr-3">📄</div>
+                        <h3 class="font-bold text-lg">Docs-as-Code</h3>
+                    </div>
+                    <p class="text-sm text-stone-600 mb-4">
+                        Automatically generating README.md or refactoring variable names for clarity.
+                    </p>
+                    <div class="bg-stone-100 p-3 rounded text-xs font-mono text-stone-600">
+                        Input: Undocumented function `proc_data(d)`<br>
+                        Output: `process_high_value_items(data_list)`
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: SECURITY PROTOCOLS -->
+        <section id="security" class="hidden p-6 md:p-10 max-w-7xl mx-auto space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-900">Security Protocols</h2>
+                <p class="text-slate-500 mt-2">Managing Risks: Hallucinations and Data Leakage.</p>
+            </header>
+
+            <div class="bg-rose-50 border border-rose-200 rounded-xl p-6">
+                <h3 class="text-xl font-bold text-rose-700 mb-2">⚠️ The "Package That Doesn't Exist"</h3>
+                <p class="text-rose-900 mb-4">
+                    <strong>Supply Chain Risk:</strong> AI might recommend a library that doesn't exist (Hallucination). Hackers create malicious packages with those exact names.
+                </p>
+                
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-rose-100">
+                    <h4 class="font-bold text-stone-700 mb-4">Package Verifier Simulation</h4>
+                    <div class="flex flex-col md:flex-row gap-4 mb-4">
+                        <input type="text" id="package-input" placeholder="Enter package name (try 'boto3-secure-connect')" class="flex-1 border border-stone-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        <button onclick="verifyPackage()" class="bg-rose-600 hover:bg-rose-700 text-white font-medium px-6 py-2 rounded-lg transition">Check PyPI</button>
+                    </div>
+                    <div id="verification-result" class="hidden p-4 rounded-lg text-sm font-medium"></div>
+                </div>
+            </div>
+
+            <div class="bg-white border border-stone-200 rounded-xl p-6">
+                <h3 class="text-xl font-bold text-slate-800 mb-4">Data Leakage Guardrails</h3>
+                <ul class="space-y-3 text-stone-600">
+                    <li class="flex items-start">
+                        <span class="text-red-500 mr-2">✖</span>
+                        Never paste AWS Private Keys or Customer PII into public LLMs.
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-green-500 mr-2">✔</span>
+                        Use Enterprise instances (Azure OpenAI) or local models for sensitive data.
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION: PROMPTING (COMMAND LINE) -->
+        <section id="prompting" class="hidden p-6 md:p-10 max-w-7xl mx-auto space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-900">Command Line</h2>
+                <p class="text-slate-500 mt-2">Prompt Engineering: The art of steering systems.</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Control Panel -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Temperature Control -->
+                    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                        <h3 class="font-bold text-lg mb-4">Parameter: Temperature</h3>
+                        <p class="text-xs text-stone-500 mb-4">Controls randomness/creativity.</p>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm font-medium">Value: <span id="temp-val">0.0</span></span>
+                                    <span class="text-xs text-indigo-600 font-bold" id="temp-label">Deterministic</span>
+                                </div>
+                                <input type="range" min="0" max="1" step="0.1" value="0" id="temp-slider" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                            </div>
+                            
+                            <div class="bg-stone-50 p-3 rounded border border-stone-200">
+                                <p class="text-xs text-stone-500 font-mono mb-1">PROMPT: "The sky is..."</p>
+                                <p class="text-sm font-bold text-slate-800" id="temp-output">Blue, Blue, Blue, Blue</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Techniques List -->
+                    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                        <h3 class="font-bold text-lg mb-4">Techniques</h3>
+                        <div class="space-y-2">
+                            <button onclick="setPromptTechnique('zero')" class="w-full text-left px-4 py-2 rounded text-sm hover:bg-stone-50 border border-transparent hover:border-stone-200 transition technique-btn active" data-tech="zero">
+                                <span class="font-bold block">Zero-Shot</span>
+                                <span class="text-xs text-stone-500">Just asking.</span>
+                            </button>
+                            <button onclick="setPromptTechnique('few')" class="w-full text-left px-4 py-2 rounded text-sm hover:bg-stone-50 border border-transparent hover:border-stone-200 transition technique-btn" data-tech="few">
+                                <span class="font-bold block">Few-Shot</span>
+                                <span class="text-xs text-stone-500">Providing examples.</span>
+                            </button>
+                            <button onclick="setPromptTechnique('cot')" class="w-full text-left px-4 py-2 rounded text-sm hover:bg-stone-50 border border-transparent hover:border-stone-200 transition technique-btn" data-tech="cot">
+                                <span class="font-bold block">Chain of Thought</span>
+                                <span class="text-xs text-stone-500">"Think step-by-step".</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prompt Lab Main Area -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                        <h3 class="font-bold text-lg mb-2">Prompt Lab</h3>
+                        <p class="text-sm text-stone-500 mb-4">See how technique changes output.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-stone-500 uppercase mb-1">User Prompt</label>
+                                <textarea id="prompt-input" readonly class="w-full bg-stone-50 border border-stone-200 rounded p-3 text-sm font-mono text-slate-700 h-32 focus:outline-none resize-none"></textarea>
+                            </div>
+                            
+                            <div class="flex justify-center">
+                                <span class="text-stone-300 text-2xl">⬇</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-stone-500 uppercase mb-1">AI Output (Simulated)</label>
+                                <div id="prompt-output" class="w-full bg-indigo-50 border border-indigo-100 rounded p-3 text-sm font-mono text-indigo-900 min-h-[100px]"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RAG Section -->
+                    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                        <h3 class="font-bold text-lg mb-2">Advanced: RAG (Retrieval-Augmented Generation)</h3>
+                        <div class="flex flex-col md:flex-row items-center justify-between text-sm text-stone-600 gap-2">
+                            <div class="bg-stone-100 px-3 py-2 rounded border border-stone-200">1. User Query</div>
+                            <span class="text-stone-400">→</span>
+                            <div class="bg-blue-50 px-3 py-2 rounded border border-blue-200 font-bold text-blue-700">2. Retrieve Docs</div>
+                            <span class="text-stone-400">→</span>
+                            <div class="bg-stone-100 px-3 py-2 rounded border border-stone-200">3. Augment Prompt</div>
+                            <span class="text-stone-400">→</span>
+                            <div class="bg-stone-100 px-3 py-2 rounded border border-stone-200">4. Answer</div>
+                        </div>
+                        <p class="text-xs text-stone-500 mt-3 italic">"Connects AI to your private data (SharePoint, Jira) without retraining."</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: FULL LECTURE NOTES (NEW) -->
+        <section id="lecture-full" class="hidden p-6 md:p-10 max-w-5xl mx-auto space-y-8 prose">
+            <header class="mb-8 border-b border-stone-200 pb-6">
+                <h2 class="text-3xl font-bold text-slate-900">Lecture Script: Introduction to Generative AI & Prompt Engineering</h2>
+                <p class="text-slate-500 mt-2">Full text transcript for reference.</p>
+            </header>
+
+            <div class="bg-white p-8 rounded-xl shadow-sm border border-stone-200">
+                <h3>Lecture Overview</h3>
+                <p>Good evening, everyone. Welcome to our session on <strong>Generative AI</strong> and <strong>Prompt Engineering</strong>. Today is <strong>January 29, 2026</strong>.</p>
+                <p>I know many of you have been hearing the buzz—or perhaps the noise—about AI for years now. We are past the initial hype cycle of 2023 and 2024. In 2026, AI is no longer a "magical toy"; it is digital infrastructure, much like the cloud became a decade ago. We aren't here to discuss sci-fi; we are here to discuss <strong>utility</strong>, <strong>automation</strong>, and how to keep your jobs relevant in an era where <strong>Agents</strong> and <strong>Reasoning Models</strong> are writing code and deploying infrastructure.</p>
+
+                <hr class="my-8 border-stone-200">
+
+                <h3>Lesson 1: Introduction to Generative AI</h3>
+
+                <h4>1. The 2026 Reality Check: What is AI?</h4>
+                <p>Let's cut through the marketing fluff.
+                <strong>AI (Artificial Intelligence)</strong> is the broad discipline of creating machines that can perform tasks requiring human intelligence.
+                <strong>ML (Machine Learning)</strong> is a subset where machines learn from data rather than being explicitly programmed with rules.
+                <strong>GenAI (Generative AI)</strong> is the subset that *creates* new data (text, code, images, audio, 3D models) rather than just analyzing existing data.</p>
+                <p>In 2026, we have moved beyond simple "Chatbots." We are now in the era of <strong>Agentic AI</strong>—systems that don't just talk back but *do* things (execute code, browse the web, manage Kubernetes clusters).</p>
+
+                <h4>Real-Life Example: The "Self-Healing" Server</h4>
+                <p><strong>Task:</strong> Comparing a traditional script to a 2026 AI Agent.<br>
+                <strong>Relation to Lecture:</strong> Illustrates the shift from "Explicit Programming" to "Generative Reasoning."</p>
+                <ul>
+                    <li><strong>Old Way (Rule-Based AI/Scripting):</strong> You write a Bash script that checks if CPU > 90%. If yes, it restarts the service. If the error is something you didn't predict (e.g., a memory leak causing a deadlock), the script fails.</li>
+                    <li><strong>New Way (Generative AI Agent):</strong> An AI agent monitors the logs. It notices latency. It *generates* a hypothesis: "This looks like a database lock." It *generates* a query to check the lock. It *decides* to kill the specific process. It writes a post-mortem report for you.</li>
+                </ul>
+
+                <h4>2. How It Works: Transformers & Tokens</h4>
+                <p>Under the hood, these models (GPT-4, Gemini, Llama 4) are built on the <strong>Transformer</strong> architecture. They don't "know" facts; they predict the next "token" (roughly a word or part of a word) based on probability. Think of it as <strong>Autocomplete on Steroids</strong>.</p>
+
+                <h4>3. IT Use Cases: The "Boring" but Powerful Stuff</h4>
+                <p>In IT, we don't need AI to write poetry. We need it to handle the drudgery.</p>
+                <ul>
+                    <li><strong>Code Generation & Refactoring:</strong> Updating Python 2 to Python 3, or Java 8 to 21.</li>
+                    <li><strong>Documentation (Docs-as-Code):</strong> Automatically generating `README.md` files from code comments.</li>
+                    <li><strong>Security Analysis:</strong> Parsing terabytes of logs to find anomalies that Regex patterns miss.</li>
+                </ul>
+
+                <h4>4. Risks: Hallucinations & Security</h4>
+                <p><strong>Hallucination:</strong> When the AI speaks confidently but lies.
+                <strong>Data Leakage:</strong> Never paste your company's AWS Private Keys or customer PII (Personal Identifiable Information) into a public LLM.</p>
+
+                <hr class="my-8 border-stone-200">
+
+                <h3>Lesson 2: Prompt Engineering</h3>
+
+                <h4>5. What is Prompt Engineering?</h4>
+                <p>Prompt Engineering is <strong>not</strong> just "asking questions." It is <strong>programming in prose</strong>. It is the skill of designing inputs (prompts) to get optimal outputs from Generative AI models. In 2026, we define it as <strong>"Model Steering."</strong></p>
+
+                <h4>Real-Life Example: The "Intern" Analogy</h4>
+                <p>Treat the AI like a highly intelligent, extremely literal summer intern who has read every book in the world but has zero context about your company.</p>
+                <ul>
+                    <li><strong>Bad Prompt:</strong> "Write an email about the outage."</li>
+                    <li><strong>Good Prompt:</strong> "Draft an email to 'All Staff' regarding the 15-minute email outage this morning. Tone: Apologetic but professional. Mention that no data was lost. Sign it from the IT Director."</li>
+                </ul>
+
+                <h4>6. Techniques: Zero-Shot, Few-Shot, Chain of Thought</h4>
+                <ul>
+                    <li><strong>Zero-Shot:</strong> Asking without examples. (Often fails for complex tasks).</li>
+                    <li><strong>Few-Shot:</strong> Providing examples in the prompt. (The "Do as I do" method).</li>
+                    <li><strong>Chain of Thought (CoT):</strong> Asking the AI to "think step-by-step." This forces the model to generate reasoning tokens before the final answer.</li>
+                </ul>
+
+                <h4>7. Parameters: Temperature & Tokens</h4>
+                <p>Even in 2026, we tune these:</p>
+                <ul>
+                    <li><strong>Temperature (0.0 - 2.0):</strong> Controls randomness.
+                        <ul>
+                            <li><strong>0.0:</strong> Deterministic. Good for Code, SQL, Math.</li>
+                            <li><strong>1.0:</strong> Creative. Good for Brainstorming, Marketing.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Max Tokens:</strong> Limits the output length.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION: RESOURCES -->
+        <section id="resources" class="hidden p-6 md:p-10 max-w-7xl mx-auto space-y-8">
+            <header>
+                <h2 class="text-3xl font-bold text-slate-900">Resources & Disclaimer</h2>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                <h3 class="font-bold text-lg mb-4">Key Links</h3>
+                <ul class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <li><a href="https://openai.com" target="_blank" class="flex items-center text-indigo-600 hover:underline"><span class="w-6 h-6 mr-2 bg-indigo-100 rounded flex items-center justify-center text-xs">↗</span> OpenAI</a></li>
+                    <li><a href="https://azure.microsoft.com/en-us/products/ai-foundry/models/openai" target="_blank" class="flex items-center text-indigo-600 hover:underline"><span class="w-6 h-6 mr-2 bg-indigo-100 rounded flex items-center justify-center text-xs">↗</span> Microsoft Azure AI</a></li>
+                    <li><a href="https://github.com/features/copilot" target="_blank" class="flex items-center text-indigo-600 hover:underline"><span class="w-6 h-6 mr-2 bg-indigo-100 rounded flex items-center justify-center text-xs">↗</span> GitHub Copilot</a></li>
+                    <li><a href="https://huggingface.co/" target="_blank" class="flex items-center text-indigo-600 hover:underline"><span class="w-6 h-6 mr-2 bg-indigo-100 rounded flex items-center justify-center text-xs">↗</span> Hugging Face</a></li>
+                    <li><a href="https://artificialintelligenceact.eu/" target="_blank" class="flex items-center text-indigo-600 hover:underline"><span class="w-6 h-6 mr-2 bg-indigo-100 rounded flex items-center justify-center text-xs">↗</span> EU AI Act</a></li>
+                </ul>
+            </div>
+
+            <div class="bg-stone-100 rounded-xl p-6 border border-stone-200">
+                <h3 class="font-bold text-stone-700 mb-2">Disclaimer</h3>
+                <p class="text-sm text-stone-600">
+                    <strong>Cybersecurity Warning:</strong> Always check external links and downloaded scripts with tools like <a href="https://www.virustotal.com/gui/home/url" class="text-indigo-600 underline">VirusTotal</a>.
+                    <br><br>
+                    <strong>Liability:</strong> Generative AI can hallucinate. Never deploy AI-generated code to production without human review.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // State
+        const state = {
+            currentSection: 'overview',
+            temperature: 0.0,
+            technique: 'zero',
+            charts: {}
+        };
+
+        // Navigation
+        function navigateTo(sectionId) {
+            // Update State
+            state.currentSection = sectionId;
+
+            // UI Updates
+            document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            // Find button linking to this section
+            const btn = document.querySelector(`button[onclick="navigateTo('${sectionId}')"]`);
+            if(btn) btn.classList.add('active');
+
+            // Trigger specific inits if needed
+            if (sectionId === 'architecture' && !state.charts.tokenChart) {
+                initTokenChart();
+            }
+        }
+
+        // Mobile Menu
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+            }
+        });
+
+        // Code Toggle
+        function toggleCode(id) {
+            const el = document.getElementById(id);
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+
+        // --- Chart.js: Token Probability ---
+        function initTokenChart() {
+            const ctx = document.getElementById('tokenChart').getContext('2d');
+            
+            state.charts.tokenChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['report', 'file', 'document', 'spreadsheet', 'elephant'],
+                    datasets: [{
+                        label: 'Probability (%)',
+                        data: [85, 10, 3, 1.9, 0.1],
+                        backgroundColor: [
+                            '#4f46e5', // Indigo 600
+                            '#818cf8',
+                            '#a5b4fc',
+                            '#c7d2fe',
+                            '#e0e7ff'
+                        ],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y + '% probability';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: { display: false }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Operations Simulation: Script vs Agent ---
+        function runSimulation(type) {
+            const scriptConsole = document.getElementById('script-console');
+            const agentConsole = document.getElementById('agent-console');
+            const simStatus = document.getElementById('sim-status');
+            
+            // Reset
+            simStatus.className = "absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700";
+            simStatus.textContent = "RUNNING";
+
+            // Trigger Event
+            const errorMsg = "CRITICAL: Transaction deadlock in DB_Shard_04";
+            
+            // Script Logic
+            if(type === 'script') {
+                scriptConsole.innerHTML += `<br>> ALERT: ${errorMsg}`;
+                setTimeout(() => {
+                    scriptConsole.innerHTML += `<br>> Checking rules...`;
+                }, 500);
+                setTimeout(() => {
+                    scriptConsole.innerHTML += `<br>> ERROR: 'Deadlock' not in rule definitions.`;
+                }, 1000);
+                setTimeout(() => {
+                    scriptConsole.innerHTML += `<br>> <span class="text-red-500">ACTION FAILED. Alerting Admin.</span>`;
+                    simStatus.className = "absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700";
+                    simStatus.textContent = "FAILED";
+                }, 1500);
+            } 
+            
+            // Agent Logic
+            if(type === 'agent') {
+                agentConsole.innerHTML += `<br>> ALERT: ${errorMsg}`;
+                setTimeout(() => {
+                    agentConsole.innerHTML += `<br>> Analysis: Database locking issue detected.`;
+                }, 800);
+                setTimeout(() => {
+                    agentConsole.innerHTML += `<br>> Reasoning: Deadlock requires killing process ID holding lock.`;
+                }, 1600);
+                setTimeout(() => {
+                    agentConsole.innerHTML += `<br>> Generated Action: <span class="text-white">KILL PID 4502</span>`;
+                }, 2400);
+                setTimeout(() => {
+                    agentConsole.innerHTML += `<br>> <span class="text-green-400">SUCCESS. Service Restored.</span>`;
+                    simStatus.className = "absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700";
+                    simStatus.textContent = "RESOLVED";
+                }, 3000);
+            }
+        }
+
+        // --- Security: Package Verify ---
+        function verifyPackage() {
+            const input = document.getElementById('package-input').value.trim();
+            const resultDiv = document.getElementById('verification-result');
+            
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = "Checking pypi.org API...";
+            resultDiv.className = "p-4 rounded-lg text-sm font-medium bg-stone-100 text-stone-600";
+
+            setTimeout(() => {
+                if (input === 'boto3-secure-connect') {
+                    // Simulation of non-existent package
+                    resultDiv.className = "p-4 rounded-lg text-sm font-medium bg-red-100 text-red-800 border border-red-200";
+                    resultDiv.innerHTML = "⚠️ <strong>WARNING: 404 Not Found.</strong><br>This package does not exist on PyPI. The AI Hallucinated. Installing this is a security risk.";
+                } else if (input === '') {
+                    resultDiv.innerHTML = "Please enter a package name.";
+                } else {
+                    // Safe simulation
+                    resultDiv.className = "p-4 rounded-lg text-sm font-medium bg-green-100 text-green-800 border border-green-200";
+                    resultDiv.innerHTML = "✅ <strong>Package Found.</strong><br>This appears to be a valid package (Simulation).";
+                }
+            }, 1000);
+        }
+
+        // --- Prompt Lab Logic ---
+        const promptData = {
+            zero: {
+                prompt: "Write SQL to find top sales.",
+                output: "SELECT * FROM sales ORDER BY amount DESC LIMIT 5;\n-- (Note: AI guesses table names)"
+            },
+            few: {
+                prompt: `Table Schema: Users(id, name), Orders(id, user_id, amount).
+Q: Find user with max orders.
+A: SELECT user_id FROM Orders GROUP BY user_id ORDER BY count(*) DESC LIMIT 1;
+Q: Find total sales.
+A: ...?`,
+                output: "SELECT SUM(amount) FROM Orders;"
+            },
+            cot: {
+                prompt: "Determine if the server outage was caused by network or disk. Logs: [Log data...]",
+                output: "Step 1: Analyze timestamps.\nStep 2: Check disk space logs (showing 40%).\nStep 3: Check network latency (showing 2000ms).\nConclusion: Network Issue."
+            }
+        };
+
+        function setPromptTechnique(tech) {
+            state.technique = tech;
+            
+            // UI Button styling
+            document.querySelectorAll('.technique-btn').forEach(btn => {
+                if(btn.dataset.tech === tech) {
+                    btn.classList.add('active', 'bg-stone-100', 'border-stone-200');
+                    btn.classList.remove('border-transparent');
+                } else {
+                    btn.classList.remove('active', 'bg-stone-100', 'border-stone-200');
+                    btn.classList.add('border-transparent');
+                }
+            });
+
+            // Update Textareas
+            document.getElementById('prompt-input').value = promptData[tech].prompt;
+            document.getElementById('prompt-output').textContent = promptData[tech].output;
+        }
+
+        // Temperature Slider Logic
+        const tempSlider = document.getElementById('temp-slider');
+        const tempVal = document.getElementById('temp-val');
+        const tempLabel = document.getElementById('temp-label');
+        const tempOutput = document.getElementById('temp-output');
+
+        const tempOutputs = [
+            "Blue, Blue, Blue, Blue", // 0.0
+            "Blue, Blue, Blue, Sky",
+            "Blue, Sky, Clear, Blue",
+            "Blue, Cloudy, Azure, Sky",
+            "Blue, Gray, Clear, Green",
+            "Azure, Sky, Gray, Teal",
+            "Cloudy, Infinite, Azure, Bright",
+            "Vast, Cerulean, Gray, Birds",
+            "Green, Liquid, Above, Void",
+            "Green, Canvas, Whispering, 404",
+            "Marshmallow, Green, False, X89" // 1.0
+        ];
+
+        tempSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            tempVal.textContent = val.toFixed(1);
+            
+            // Update Label
+            if (val < 0.3) {
+                tempLabel.textContent = "Deterministic (Code/Math)";
+                tempLabel.className = "text-xs font-bold text-indigo-600";
+            } else if (val < 0.7) {
+                tempLabel.textContent = "Balanced (Writing)";
+                tempLabel.className = "text-xs font-bold text-purple-600";
+            } else {
+                tempLabel.textContent = "Creative/Random (Brainstorming)";
+                tempLabel.className = "text-xs font-bold text-orange-600";
+            }
+
+            // Update Output
+            const index = Math.round(val * 10);
+            tempOutput.textContent = tempOutputs[index];
+        });
+
+        // Initial Setup
+        setPromptTechnique('zero');
+
+    </script>
+</body>
+</html>
+
+
