@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenAI & Prompt Engineering 2026 Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        indigo: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        },
+                        slate: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* 3D Flip Utilities */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden; /* Safari support */
+        }
+        
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        /* Hide scrollbar for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+        <div>
+            <h1 class="text-xl font-bold text-indigo-700">GenAI Prep 2026</h1>
+            <p class="text-xs text-slate-500">IT Professional Course • Jan 29, 2026</p>
+        </div>
+        <div class="text-sm font-medium bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-100" id="counter">
+            1 / 25
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col items-center justify-center p-4 relative w-full max-w-4xl mx-auto">
+        
+        <!-- Progress Bar -->
+        <div class="w-full max-w-2xl bg-slate-200 h-1.5 rounded-full mb-8 overflow-hidden">
+            <div id="progress-bar" class="bg-indigo-600 h-full rounded-full transition-all duration-300" style="width: 4%"></div>
+        </div>
+
+        <!-- Flashcard Scene -->
+        <div class="perspective-1000 w-full max-w-2xl h-80 sm:h-96 cursor-pointer group" onclick="flipCard()">
+            <div id="card-inner" class="relative w-full h-full text-center transition-transform duration-500 transform-style-3d shadow-xl rounded-2xl">
+                
+                <!-- Front Face -->
+                <div class="absolute w-full h-full backface-hidden bg-white border border-slate-200 rounded-2xl flex flex-col items-center justify-center p-8 sm:p-12 hover:shadow-2xl hover:border-indigo-200 transition-all">
+                    <span class="absolute top-6 left-6 text-xs font-bold tracking-widest text-slate-400 uppercase">Term</span>
+                    <h2 id="card-front-text" class="text-2xl sm:text-4xl font-bold text-slate-800 leading-tight">
+                        <!-- Term goes here -->
+                    </h2>
+                    <p class="absolute bottom-6 text-xs text-slate-400 animate-pulse">Click or Space to Flip</p>
+                </div>
+
+                <!-- Back Face -->
+                <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-indigo-600 text-white rounded-2xl flex flex-col items-center justify-center p-8 sm:p-12">
+                    <span class="absolute top-6 left-6 text-xs font-bold tracking-widest text-indigo-200 uppercase">Definition</span>
+                    <p id="card-back-text" class="text-lg sm:text-2xl font-medium leading-relaxed">
+                        <!-- Definition goes here -->
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="mt-10 flex items-center gap-4 sm:gap-6">
+            
+            <button onclick="prevCard()" class="p-4 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500" title="Previous (Left Arrow)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+
+            <button onclick="flipCard()" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition-all flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                <span>Flip Card</span>
+            </button>
+
+            <button onclick="nextCard()" class="p-4 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500" title="Next (Right Arrow)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+
+        </div>
+
+        <button onclick="shuffleDeck()" class="mt-6 text-sm text-slate-500 hover:text-indigo-600 flex items-center gap-1 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l14.2-12.2"/><path d="M22 22v-5h-5"/><path d="M22 2v5h-5"/><path d="M2 6h1.4c1.3 0 2.5.6 3.3 1.7l3.2 2.7"/><path d="M22 17.5 5.8 3.5"/></svg>
+            Shuffle Deck
+        </button>
+
+    </main>
+
+    <!-- Key Shortcuts Hint -->
+    <footer class="p-4 text-center text-xs text-slate-400 hidden sm:block">
+        Shortcuts: <span class="font-mono bg-slate-100 px-1 rounded">Space</span> to Flip &nbsp;•&nbsp; <span class="font-mono bg-slate-100 px-1 rounded">←</span> <span class="font-mono bg-slate-100 px-1 rounded">→</span> to Navigate
+    </footer>
+
+    <script>
+        // Data injected from your generated file
+        const originalData = [
+            { front: "Artificial Intelligence (AI)", back: "The broad discipline of creating machines that can perform tasks requiring human intelligence." },
+            { front: "Machine Learning (ML)", back: "A subset of AI where machines learn from data rather than being explicitly programmed with rules." },
+            { front: "Generative AI (GenAI)", back: "A subset of AI that creates new data (text, code, images, audio) rather than just analyzing existing data." },
+            { front: "Agentic AI", back: "AI systems that go beyond conversation to perform actions like executing code, browsing the web, or managing infrastructure." },
+            { front: "Transformer Architecture", back: "The underlying architecture of modern GenAI models that predicts the next token based on probability." },
+            { front: "Token", back: "The basic unit of text (roughly a word or part of a word) processed by AI models, converted into numerical IDs." },
+            { front: "Context Window", back: "The amount of text (measured in tokens) an AI model can process and remember at one time." },
+            { front: "AI Hallucination", back: "A phenomenon where an AI model speaks confidently but generates factually incorrect information." },
+            { front: "Prompt Engineering", back: "The skill of designing specific inputs to guide Generative AI models toward optimal outputs; also called Model Steering." },
+            { front: "Zero-Shot Prompting", back: "Asking an AI model to perform a task without providing any examples." },
+            { front: "Few-Shot Prompting", back: "Providing examples within the prompt to guide the AI model's output format or style." },
+            { front: "Chain of Thought (CoT)", back: "A technique asking the AI to 'think step-by-step,' forcing it to generate reasoning tokens before the final answer." },
+            { front: "Temperature Parameter", back: "A setting that controls the randomness of AI output; lower values are deterministic, higher values are creative." },
+            { front: "Best Use for Temperature 0.0", back: "Tasks requiring precision and consistency, such as coding, SQL generation, or math." },
+            { front: "Best Use for Temperature 1.0", back: "Tasks requiring creativity and variety, such as brainstorming or marketing copy." },
+            { front: "RAG (Retrieval-Augmented Generation)", back: "A technique where AI retrieves relevant information from private documents to augment the prompt before generating an answer." },
+            { front: "AI Package Hallucination Exploitation", back: "A security risk where hackers create malicious software packages with names that AI models falsely recommend." },
+            { front: "Data Leakage Guardrail", back: "The practice of ensuring sensitive data like API keys or PII is never pasted into public LLMs." },
+            { front: "Tiktoken", back: "A standard Python library used to convert text into tokens for OpenAI models." },
+            { front: "The 'Intern' Analogy", back: "Treating AI like a smart but literal intern who lacks context, requiring specific instructions to perform well." },
+            { front: "Docs-as-Code", back: "Using AI to automatically generate documentation, such as README files, directly from code comments." },
+            { front: "Generative Reasoning", back: "The ability of AI to interpret context and generate solutions based on patterns, unlike rigid rule-based programming." },
+            { front: "Model Steering", back: "The 2026 definition of prompt engineering: guiding a probabilistic engine to a deterministic outcome." },
+            { front: "Next Token Prediction", back: "The fundamental mechanism of GenAI models, predicting the most probable next piece of text based on preceding context." },
+            { front: "Legacy Code Archeologist", back: "An AI use case for explaining, documenting, and refactoring old or undocumented codebases." }
+        ];
+
+        // App State
+        let deck = [...originalData];
+        let currentIndex = 0;
+        let isFlipped = false;
+
+        // DOM Elements
+        const cardInner = document.getElementById('card-inner');
+        const frontText = document.getElementById('card-front-text');
+        const backText = document.getElementById('card-back-text');
+        const counter = document.getElementById('counter');
+        const progressBar = document.getElementById('progress-bar');
+
+        // Initialization
+        function init() {
+            renderCard();
+        }
+
+        // Render Current Card
+        function renderCard() {
+            const card = deck[currentIndex];
+            
+            // Ensure we start on the front face when switching cards
+            if (isFlipped) {
+                // Disable transition specifically for the reset to avoid "flipping back" visually if moving forward
+                cardInner.classList.remove('duration-500'); 
+                cardInner.classList.remove('rotate-y-180');
+                isFlipped = false;
+                
+                // Re-enable transition after a tiny delay so the next flip animates correctly
+                setTimeout(() => {
+                    cardInner.classList.add('duration-500');
+                }, 50);
+            }
+
+            frontText.textContent = card.front;
+            backText.textContent = card.back;
+            
+            updateProgress();
+        }
+
+        // Update UI Progress
+        function updateProgress() {
+            const currentNum = currentIndex + 1;
+            const total = deck.length;
+            counter.textContent = `${currentNum} / ${total}`;
+            
+            const percent = (currentNum / total) * 100;
+            progressBar.style.width = `${percent}%`;
+        }
+
+        // Core Actions
+        function flipCard() {
+            if (isFlipped) {
+                cardInner.classList.remove('rotate-y-180');
+            } else {
+                cardInner.classList.add('rotate-y-180');
+            }
+            isFlipped = !isFlipped;
+        }
+
+        function nextCard() {
+            if (currentIndex < deck.length - 1) {
+                currentIndex++;
+                renderCard();
+            } else {
+                // Loop to start
+                currentIndex = 0;
+                renderCard();
+            }
+        }
+
+        function prevCard() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                renderCard();
+            } else {
+                // Loop to end
+                currentIndex = deck.length - 1;
+                renderCard();
+            }
+        }
+
+        function shuffleDeck() {
+            // Fisher-Yates Shuffle
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            currentIndex = 0;
+            isFlipped = false;
+            cardInner.classList.remove('rotate-y-180');
+            renderCard();
+        }
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault(); // Prevent scrolling
+                flipCard();
+            } else if (e.code === 'ArrowRight') {
+                nextCard();
+            } else if (e.code === 'ArrowLeft') {
+                prevCard();
+            }
+        });
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
+
+
+
+
